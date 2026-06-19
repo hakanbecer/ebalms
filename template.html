@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ unite_adi }} - {{ konu_adi }}</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f6f9; color: #333; padding: 20px; line-height: 1.6; }
+        .container { max-width: 800px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        
+        #startScreen { text-align: center; padding: 50px 20px; animation: fadeIn 0.5s; }
+        .start-title { color: #2c3e50; font-size: 2.5em; margin-bottom: 10px; }
+        .start-subtitle { color: #6c757d; font-size: 1.5em; margin-bottom: 30px; font-weight: normal; }
+        .start-desc { font-size: 1.1em; color: #555; margin-bottom: 40px; }
+        .start-btn { background-color: #28a745; color: white; border: none; padding: 15px 40px; font-size: 1.3em; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.3s; box-shadow: 0 4px 6px rgba(40,167,69,0.3); }
+        .start-btn:hover { background-color: #218838; transform: translateY(-2px); box-shadow: 0 6px 8px rgba(40,167,69,0.4); }
+
+        #quizContainer { display: none; }
+
+        .question-card { display: none; margin-bottom: 20px; padding-bottom: 20px; border-bottom: 1px solid #eee; min-height: 250px; }
+        .question-card.active { display: block; animation: fadeIn 0.5s; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .question-text { font-size: 1.2em; font-weight: bold; margin-bottom: 20px; color: #2c3e50; }
+        
+        /* GÖRSEL TASARIMI */
+        .question-image-container { text-align: center; margin-bottom: 20px; }
+        .question-image { max-width: 100%; max-height: 350px; border-radius: 8px; border: 1px solid #ddd; padding: 5px; background: white; }
+
+        .options { display: flex; flex-direction: column; gap: 10px; }
+        .option-btn { padding: 12px 15px; border: 2px solid #e0e0e0; border-radius: 6px; background: white; cursor: pointer; text-align: left; font-size: 1em; transition: 0.2s; }
+        .option-btn:hover:not(:disabled) { border-color: #007bff; background-color: #f8f9fa; }
+        
+        .blank-input { padding: 5px 10px; margin: 0 5px; border: 2px solid #ccc; border-radius: 4px; font-size: 1em; width: 140px; text-align: center; }
+        .blank-input:focus { outline: none; border-color: #007bff; }
+        .check-btn { margin-top: 20px; padding: 10px 20px; background-color: #17a2b8; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.3s; }
+        .check-btn:hover:not(:disabled) { background-color: #138496; }
+        .retry-btn { background-color: #ffc107 !important; color: #212529 !important; }
+        .retry-btn:hover:not(:disabled) { background-color: #e0a800 !important; }
+        .show-ans-btn { background-color: #6c757d !important; color: white !important; }
+        .show-ans-btn:hover:not(:disabled) { background-color: #5a6268 !important; }
+        
+        .dd-container { display: flex; gap: 20px; margin-top: 15px; }
+        .draggables-col { flex: 1; display: flex; flex-direction: column; gap: 10px; background: #fdfdfd; padding: 15px; border-radius: 8px; border: 1px dashed #ccc; min-height: 150px; }
+        .dropzones-col { flex: 1; display: flex; flex-direction: column; gap: 10px; }
+        .draggable-item { padding: 10px; background-color: #e9ecef; border: 2px solid #adb5bd; border-radius: 6px; cursor: grab; text-align: center; font-weight: bold; }
+        .draggable-item:active { cursor: grabbing; }
+        
+        .dropzone { padding: 10px; background-color: #f8f9fa; border: 2px dashed #adb5bd; border-radius: 6px; min-height: 85px; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; text-align: center; font-size: 0.9em; transition: 0.3s; }
+        .dropzone-text { font-weight: bold; margin-bottom: 10px; pointer-events: none; width: 100%; border-bottom: 1px solid #dee2e6; padding-bottom: 5px; color: #495057; }
+        .dropzone .draggable-item { margin: 0; width: 100%; border-style: solid; }
+        
+        .correct { background-color: #d4edda !important; border-color: #28a745 !important; color: #155724 !important; }
+        .wrong { background-color: #f8d7da !important; border-color: #dc3545 !important; color: #721c24 !important; }
+        
+        .nav-container { display: flex; justify-content: space-between; align-items: center; margin-top: 20px; }
+        .next-btn { background-color: #007bff; color: white; border: none; padding: 10px 25px; font-size: 1.1em; border-radius: 6px; cursor: pointer; display: none; transition: 0.3s; font-weight: bold; }
+        .next-btn:hover { background-color: #0056b3; }
+        .progress-text { color: #6c757d; font-size: 1em; font-weight: bold; margin-bottom: 15px; }
+        
+        #resultScreen { display: none; text-align: center; padding: 40px 20px; }
+        #resultScreen h1 { color: #28a745; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div id="startScreen">
+            <h1 class="start-title">{{ unite_adi }}</h1>
+            <h2 class="start-subtitle">{{ konu_adi }}</h2>
+            <p class="start-desc">Bu etkinlik <strong>{{ sorular|length }}</strong> sorudan oluşmaktadır.<br>Hazır olduğunuzda aşağıdaki butona tıklayarak başlayabilirsiniz.</p>
+            <button class="start-btn" onclick="startQuiz()">🚀 Etkinliğe Başla</button>
+        </div>
+
+        <div id="quizContainer">
+            <div class="progress-text" id="progressText">Soru: 1 / {{ sorular|length }}</div>
+            <hr style="border: 0; border-top: 1px solid #eee; margin-bottom: 20px;">
+            
+            {% for soru in sorular %}
+            <div class="question-card {% if loop.index == 1 %}active{% endif %}" id="q_{{ loop.index }}" data-type="{{ soru.soru_tipi }}" data-attempts="0">
+                
+                {% if soru.soru_tipi == 'Çoktan Seçmeli' %}
+                <div class="question-text">{{ loop.index }}. {{ soru.soru_metni }}</div>
+                {% if soru.resim_yolu %}
+                <div class="question-image-container">
+                    <img src="assets/{{ soru.resim_yolu }}" class="question-image" alt="Soru Görseli">
+                </div>
+                {% endif %}
+                <div class="options">
+                    {% for harf, metin in soru.secenekler.items() %}
+                    <button class="option-btn" onclick="checkMultipleChoice(this, '{{ harf }}', '{{ soru.dogru_cevap }}')">
+                        <b>{{ harf }})</b> {{ metin }}
+                    </button>
+                    {% endfor %}
+                </div>
+                {% endif %}
+                
+                {% if soru.soru_tipi == 'Doğru/Yanlış' %}
+                <div class="question-text">{{ loop.index }}. {{ soru.soru_metni }}</div>
+                {% if soru.resim_yolu %}
+                <div class="question-image-container">
+                    <img src="assets/{{ soru.resim_yolu }}" class="question-image" alt="Soru Görseli">
+                </div>
+                {% endif %}
+                <div class="options">
+                    <button class="option-btn" onclick="checkMultipleChoice(this, 'Doğru', '{{ soru.dogru_cevap }}')">Doğru</button>
+                    <button class="option-btn" onclick="checkMultipleChoice(this, 'Yanlış', '{{ soru.dogru_cevap }}')">Yanlış</button>
+                </div>
+                {% endif %}
+
+                {% if soru.soru_tipi == 'Boşluk Doldurma' %}
+                <div class="question-text">{{ loop.index }}. {{ soru.html_metin | safe }}</div>
+                {% if soru.resim_yolu %}
+                <div class="question-image-container">
+                    <img src="assets/{{ soru.resim_yolu }}" class="question-image" alt="Soru Görseli">
+                </div>
+                {% endif %}
+                <button class="check-btn" onclick="checkFillBlank(this)">Cevabımı Kontrol Et</button>
+                {% endif %}
+
+                {% if soru.soru_tipi == 'Sürükle-Bırak' %}
+                <div class="question-text">{{ loop.index }}. {{ soru.soru_metni }}</div>
+                {% if soru.resim_yolu %}
+                <div class="question-image-container">
+                    <img src="assets/{{ soru.resim_yolu }}" class="question-image" alt="Soru Görseli">
+                </div>
+                {% endif %}
+                <div class="dd-container">
+                    <div class="draggables-col" id="drags_{{ loop.index }}" ondrop="dropToPool(event)" ondragover="allowDrop(event)">
+                        {% for oge in soru.suruklenecekler %}
+                        <div class="draggable-item" draggable="true" ondragstart="drag(event)" id="drag_{{ loop.index }}_{{ loop.index0 }}" data-value="{{ oge }}">{{ oge }}</div>
+                        {% endfor %}
+                    </div>
+                    <div class="dropzones-col">
+                        {% for hedef in soru.hedefler %}
+                        <div class="dropzone" data-expected="{{ soru.suruklenecekler[loop.index0] }}" ondrop="drop(event)" ondragover="allowDrop(event)">
+                            <div class="dropzone-text">{{ hedef }}</div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                <button class="check-btn" onclick="checkDragDrop(this)">Eşleştirmeyi Kontrol Et</button>
+                {% endif %}
+
+            </div>
+            {% endfor %}
+
+            <div class="nav-container">
+                <div id="feedbackText" style="font-weight:bold;"></div>
+                <button id="nextBtn" class="next-btn" onclick="goNext()">İleri ➔</button>
+            </div>
+        </div>
+
+        <div id="resultScreen">
+            <h1>Tebrikler!</h1>
+            <p>Etkinliği başarıyla tamamladınız.</p>
+            <h2 id="finalScoreText"></h2>
+        </div>
+    </div>
+
+    <script>
+        var scormAPI = null;
+        var lmsTrackingActive = {{ lms_tracking }}; 
+        
+        function getAPI(window) {
+            var theAPI = null;
+            var attempts = 0;
+            while ((window.API == null) && (window.parent != null) && (window.parent != window)) {
+                attempts++;
+                if (attempts > 7) break;
+                window = window.parent;
+            }
+            if (window.API != null) theAPI = window.API;
+            return theAPI;
+        }
+
+        function initSCORM() {
+            scormAPI = getAPI(window);
+            if (scormAPI) {
+                scormAPI.LMSInitialize("");
+                scormAPI.LMSSetValue("cmi.core.lesson_status", "incomplete");
+            }
+        }
+
+        function finishSCORM(scoreStr) {
+            if (scormAPI) {
+                if (lmsTrackingActive) {
+                    scormAPI.LMSSetValue("cmi.core.score.raw", scoreStr);
+                }
+                scormAPI.LMSSetValue("cmi.core.lesson_status", "completed");
+                scormAPI.LMSCommit("");
+                scormAPI.LMSFinish("");
+            }
+        }
+
+        window.onload = initSCORM;
+        window.onunload = function() { if(scormAPI) scormAPI.LMSFinish(""); };
+
+        let currentQuestion = 1;
+        const totalQuestions = {{ sorular|length }};
+        let isAnswered = false;
+        let correctAnswersCount = 0;
+
+        function startQuiz() {
+            document.getElementById('startScreen').style.display = 'none';
+            document.getElementById('quizContainer').style.display = 'block';
+        }
+
+        function showNextButton() {
+            let nextBtn = document.getElementById('nextBtn');
+            nextBtn.style.display = 'block';
+            if (currentQuestion === totalQuestions) {
+                nextBtn.innerHTML = "Testi Bitir ✓";
+                nextBtn.style.backgroundColor = "#28a745";
+            }
+        }
+
+        function checkMultipleChoice(button, secilen, dogru_cevap) {
+            if (isAnswered) return;
+            isAnswered = true;
+            let parent = button.parentElement;
+            Array.from(parent.children).forEach(btn => btn.disabled = true);
+
+            if (secilen === dogru_cevap) {
+                button.classList.add('correct');
+                correctAnswersCount++;
+            } else {
+                button.classList.add('wrong');
+                Array.from(parent.children).forEach(btn => {
+                    if(btn.innerHTML.includes(dogru_cevap)) {
+                        btn.classList.add('correct');
+                    }
+                });
+            }
+            showNextButton();
+        }
+
+        function checkFillBlank(button) {
+            if (button.disabled && !button.classList.contains('retry-btn') && !button.classList.contains('show-ans-btn')) return;
+            let parent = button.closest('.question-card');
+            let inputs = parent.querySelectorAll('.blank-input');
+            
+            if (button.classList.contains('show-ans-btn')) {
+                inputs.forEach(input => {
+                    input.value = input.getAttribute('data-answer');
+                    input.style.borderColor = "#28a745";
+                    input.style.backgroundColor = "#d4edda";
+                    input.disabled = true;
+                });
+                button.innerHTML = "Doğru Cevaplar Gösterildi";
+                button.className = "check-btn correct";
+                button.disabled = true;
+                isAnswered = true;
+                showNextButton();
+                return;
+            }
+
+            let allCorrect = true;
+            let attempts = parseInt(parent.getAttribute('data-attempts') || "0");
+            attempts++;
+            parent.setAttribute('data-attempts', attempts);
+
+            inputs.forEach(input => {
+                let correctAnswer = input.getAttribute('data-answer').toLocaleLowerCase('tr-TR').trim();
+                let userAnswer = input.value.toLocaleLowerCase('tr-TR').trim();
+                if (userAnswer === correctAnswer) {
+                    input.style.borderColor = "#28a745";
+                    input.style.backgroundColor = "#d4edda";
+                    input.disabled = true; 
+                } else {
+                    input.style.borderColor = "#dc3545";
+                    input.style.backgroundColor = "#f8d7da";
+                    allCorrect = false;
+                }
+            });
+
+            if (allCorrect) {
+                correctAnswersCount++;
+                button.innerHTML = "Tebrikler, Doğru!";
+                button.className = "check-btn correct";
+                button.disabled = true;
+                isAnswered = true;
+                showNextButton();
+            } else {
+                if (attempts < 3) {
+                    button.innerHTML = "Yanlışlar Var! Tekrar Dene (Kalan Hakkın: " + (3 - attempts) + ")";
+                    button.classList.add('retry-btn');
+                    setTimeout(() => {
+                        inputs.forEach(input => {
+                            if (!input.disabled) { 
+                                input.style.borderColor = "#ccc";
+                                input.style.backgroundColor = "white";
+                                input.value = "";
+                            }
+                        });
+                    }, 1000);
+                } else {
+                    button.innerHTML = "Cevapları Göster";
+                    button.classList.remove('retry-btn');
+                    button.classList.add('show-ans-btn');
+                    inputs.forEach(input => input.disabled = true); 
+                }
+            }
+        }
+
+        function allowDrop(ev) { ev.preventDefault(); }
+        function drag(ev) { ev.dataTransfer.setData("text", ev.target.id); }
+        function drop(ev) {
+            ev.preventDefault();
+            var data = ev.dataTransfer.getData("text");
+            var draggedElement = document.getElementById(data);
+            if (ev.target.classList.contains('dropzone')) {
+                if (ev.target.querySelectorAll('.draggable-item').length === 0) {
+                    ev.target.appendChild(draggedElement);
+                }
+            }
+        }
+        function dropToPool(ev) {
+            ev.preventDefault();
+            var data = ev.dataTransfer.getData("text");
+            var draggedElement = document.getElementById(data);
+            let pool = ev.target.closest('.draggables-col');
+            if (pool) {
+                pool.appendChild(draggedElement);
+            }
+        }
+
+        function checkDragDrop(button) {
+            if (button.disabled && !button.classList.contains('retry-btn') && !button.classList.contains('show-ans-btn')) return;
+            let parent = button.closest('.question-card');
+            let dropzones = parent.querySelectorAll('.dropzone');
+            let pool = parent.querySelector('.draggables-col');
+            
+            if (button.classList.contains('show-ans-btn')) {
+                dropzones.forEach(dz => {
+                    let expected = dz.getAttribute('data-expected');
+                    dz.classList.remove('wrong');
+                    dz.classList.add('correct');
+                    let correctItem = parent.querySelector(`.draggable-item[data-value="${expected}"]`);
+                    if (correctItem) {
+                        dz.appendChild(correctItem);
+                        correctItem.setAttribute('draggable', 'false');
+                    }
+                });
+                button.innerHTML = "Doğru Cevaplar Gösterildi";
+                button.className = "check-btn correct";
+                button.disabled = true;
+                isAnswered = true;
+                showNextButton();
+                return;
+            }
+
+            let allCorrect = true;
+            let attempts = parseInt(parent.getAttribute('data-attempts') || "0");
+            attempts++;
+            parent.setAttribute('data-attempts', attempts);
+
+            dropzones.forEach(dz => {
+                let expected = dz.getAttribute('data-expected');
+                let child = dz.querySelector('.draggable-item');
+                if (child && child.getAttribute('data-value') === expected) {
+                    dz.classList.remove('wrong');
+                    dz.classList.add('correct');
+                    child.setAttribute('draggable', 'false'); 
+                } else {
+                    dz.classList.add('wrong');
+                    allCorrect = false;
+                }
+            });
+
+            if (allCorrect) {
+                correctAnswersCount++; 
+                button.innerHTML = "Tebrikler, Doğru!";
+                button.className = "check-btn correct";
+                button.disabled = true;
+                parent.querySelectorAll('.draggable-item').forEach(el => el.setAttribute('draggable', 'false'));
+                isAnswered = true;
+                showNextButton();
+            } else {
+                if (attempts < 3) {
+                    button.innerHTML = "Yanlışlar Var! Tekrar Dene (Kalan Hakkın: " + (3 - attempts) + ")";
+                    button.classList.add('retry-btn');
+                    setTimeout(() => {
+                        dropzones.forEach(dz => {
+                            let child = dz.querySelector('.draggable-item');
+                            if (child && dz.classList.contains('wrong')) {
+                                dz.classList.remove('wrong');
+                                pool.appendChild(child);
+                            }
+                        });
+                    }, 1000);
+                } else {
+                    button.innerHTML = "Cevapları Göster";
+                    button.classList.remove('retry-btn');
+                    button.classList.add('show-ans-btn');
+                    parent.querySelectorAll('.draggable-item').forEach(el => el.setAttribute('draggable', 'false'));
+                }
+            }
+        }
+
+        function goNext() {
+            if (currentQuestion < totalQuestions) {
+                document.getElementById('q_' + currentQuestion).classList.remove('active');
+                currentQuestion++;
+                document.getElementById('q_' + currentQuestion).classList.add('active');
+                document.getElementById('progressText').innerText = "Soru: " + currentQuestion + " / " + totalQuestions;
+                isAnswered = false;
+                document.getElementById('nextBtn').style.display = 'none';
+            } else {
+                document.getElementById('quizContainer').style.display = 'none';
+                document.getElementById('resultScreen').style.display = 'block';
+                let finalScore = Math.round((correctAnswersCount / totalQuestions) * 100);
+                if(lmsTrackingActive) {
+                    document.getElementById('finalScoreText').innerText = "Puanınız: " + finalScore + " / 100";
+                }
+                finishSCORM(finalScore.toString());
+            }
+        }
+    </script>
+</body>
+</html>
